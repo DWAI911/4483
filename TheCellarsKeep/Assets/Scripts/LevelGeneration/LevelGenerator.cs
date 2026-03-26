@@ -2,11 +2,8 @@ using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
-/// Procedural level generator that creates a new mansion layout each run.
-- Uses a template-based approach with room prefabs
-- Ensures start and end rooms are placed
-- Distributes items and hiding spots throughout
-- Generates NavMesh for AI pathfinding
+/// Procedural level generator.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class LevelGenerator : MonoBehaviour
 {
@@ -17,14 +14,14 @@ public class LevelGenerator : MonoBehaviour
         public GameObject prefab;
         public int minCount = 0;
         public int maxCount = 3;
-        public float weight = 1f; // Probability weight
+        public float weight = 1f;
     }
 
     [Header("Generation Settings")]
     [SerializeField] private int minRooms = 10;
     [SerializeField] private int maxRooms = 20;
     [SerializeField] private float roomSpacing = 12f;
-    [SerializeField] private int generationSeed = 0; // 0 = random each time
+    [SerializeField] private int generationSeed = 0;
 
     [Header("Room Prefabs")]
     [SerializeField] private RoomPrefabEntry[] roomPrefabs;
@@ -35,27 +32,20 @@ public class LevelGenerator : MonoBehaviour
     [SerializeField] private GameObject keyPrefab;
     [SerializeField] private GameObject fusePrefab;
     [SerializeField] private GameObject fearEssencePrefab;
-    [SerializeField] private GameObject[] consumablePrefabs;
 
     [Header("Hiding Spots")]
     [SerializeField] private GameObject[] hidingSpotPrefabs;
 
     [Header("References")]
-    [SerializeField] private Transform playerSpawnPoint;
     [SerializeField] private AIChaser enemyPrefab;
-
-    [Header("NavMesh")]
-    [SerializeField] private bool generateNavMesh = true;
 
     // Runtime data
     private List<Room> generatedRooms = new List<Room>();
-    private List<Door> generatedDoors = new List<Door>();
     private Dictionary<Vector2Int, Room> roomGrid = new Dictionary<Vector2Int, Room>();
     private int currentSeed;
     private Room startRoom;
     private Room endRoom;
 
-    // Events
     public event System.Action OnGenerationComplete;
 
     public Room StartRoom => startRoom;
@@ -88,29 +78,12 @@ public class LevelGenerator : MonoBehaviour
         
         int targetRoomCount = Random.Range(minRooms, maxRooms + 1);
         
-        // Phase 1: Generate rooms
         GenerateRooms(targetRoomCount);
-
-        // Phase 2: Connect rooms with doors
         ConnectRooms();
-
-        // Phase 3: Place items
         DistributeItems();
-
-        // Phase 4: Place hiding spots
         DistributeHidingSpots();
-
-        // Phase 5: Spawn player
         SpawnPlayer();
-
-        // Phase 6: Spawn enemy
         SpawnEnemy();
-
-        // Phase 7: Generate NavMesh
-        if (generateNavMesh)
-        {
-            GenerateNavMeshSurface();
-        }
 
         OnGenerationComplete?.Invoke();
         Debug.Log($"Level generated with {generatedRooms.Count} rooms");
@@ -118,7 +91,6 @@ public class LevelGenerator : MonoBehaviour
 
     public void ClearLevel()
     {
-        // Destroy all generated objects
         foreach (Room room in generatedRooms)
         {
             if (room != null)
@@ -128,21 +100,18 @@ public class LevelGenerator : MonoBehaviour
         }
 
         generatedRooms.Clear();
-        generatedDoors.Clear();
         roomGrid.Clear();
         startRoom = null;
         endRoom = null;
     }
 
-    #region Phase 1: Room Generation
+    #region Room Generation
     private void GenerateRooms(int targetCount)
     {
-        // Always place start room first
         startRoom = CreateRoom(startRoomPrefab, Vector3.zero, Room.RoomType.StartRoom);
         generatedRooms.Add(startRoom);
         roomGrid[Vector2Int.zero] = startRoom;
 
-        // Use BFS to place rooms
         Queue<Vector2Int> frontier = new Queue<Vector2Int>();
         frontier.Enqueue(Vector2Int.zero);
 
@@ -151,9 +120,7 @@ public class LevelGenerator : MonoBehaviour
         while (roomsPlaced < targetCount && frontier.Count > 0)
         {
             Vector2Int currentGridPos = frontier.Dequeue();
-            Room currentRoom = roomGrid[currentGridPos];
 
-            // Try to place rooms in each direction
             List<Vector2Int> possibleDirections = new List<Vector2Int>
             {
                 Vector2Int.up,
@@ -170,13 +137,10 @@ public class LevelGenerator : MonoBehaviour
 
                 Vector2Int newGridPos = currentGridPos + dir;
 
-                // Check if position is already occupied
                 if (roomGrid.ContainsKey(newGridPos)) continue;
 
-                // Decide if we should place a room here
                 if (Random.value > 0.7f && roomsPlaced < targetCount - 2) continue;
 
-                // Place last room as end room
                 if (roomsPlaced == targetCount - 1)
                 {
                     Vector3 worldPos = GridToWorldPos(newGridPos);
@@ -187,7 +151,6 @@ public class LevelGenerator : MonoBehaviour
                     break;
                 }
 
-                // Place random room
                 Room.RoomType roomType = SelectRandomRoomType();
                 GameObject prefab = GetPrefabForType(roomType);
                 
@@ -203,13 +166,9 @@ public class LevelGenerator : MonoBehaviour
             }
         }
 
-        // Ensure we have an end room
         if (endRoom == null && generatedRooms.Count > 1)
         {
-            // Convert last placed room to end room
-            Room lastRoom = generatedRooms[generatedRooms.Count - 1];
-            // For simplicity, just mark it as end room
-            // In a full implementation, you'd replace it with the end room prefab
+            Debug.Log("No end room placed - need end room prefab");
         }
     }
 
@@ -231,11 +190,7 @@ public class LevelGenerator : MonoBehaviour
 
     private Vector3 GridToWorldPos(Vector2Int gridPos)
     {
-        return new Vector3(
-            gridPos.x * roomSpacing,
-            0f,
-            gridPos.y * roomSpacing
-        );
+        return new Vector3(gridPos.x * roomSpacing, 0f, gridPos.y * roomSpacing);
     }
 
     private Room.RoomType SelectRandomRoomType()
@@ -251,10 +206,7 @@ public class LevelGenerator : MonoBehaviour
             }
         }
 
-        if (weightedTypes.Count == 0)
-        {
-            return Room.RoomType.Corridor;
-        }
+        if (weightedTypes.Count == 0) return Room.RoomType.Corridor;
 
         return weightedTypes[Random.Range(0, weightedTypes.Count)];
     }
@@ -263,69 +215,25 @@ public class LevelGenerator : MonoBehaviour
     {
         foreach (RoomPrefabEntry entry in roomPrefabs)
         {
-            if (entry.type == type)
-            {
-                return entry.prefab;
-            }
+            if (entry.type == type) return entry.prefab;
         }
         return null;
     }
     #endregion
 
-    #region Phase 2: Connect Rooms
+    #region Connect Rooms
     private void ConnectRooms()
     {
-        // For each room, check neighbors and create doors
-        foreach (var kvp in roomGrid)
-        {
-            Vector2Int gridPos = kvp.Key;
-            Room room = kvp.Value;
-
-            // Check each direction
-            Vector2Int[] directions = {
-                Vector2Int.up,
-                Vector2Int.right,
-                Vector2Int.down,
-                Vector2Int.left
-            };
-
-            foreach (Vector2Int dir in directions)
-            {
-                Vector2Int neighborPos = gridPos + dir;
-                
-                if (roomGrid.TryGetValue(neighborPos, out Room neighborRoom))
-                {
-                    // Create door between rooms
-                    CreateDoorBetweenRooms(room, neighborRoom, dir);
-                }
-            }
-        }
-    }
-
-    private void CreateDoorBetweenRooms(Room roomA, Room roomB, Vector2Int direction)
-    {
-        // Calculate door position (between rooms)
-        Vector3 doorPos = (roomA.transform.position + roomB.transform.position) / 2f;
-        
-        // Create door (simplified - in full implementation, use a door prefab)
-        // For now, we'll just note the connection
-        // In practice, each room would have door prefabs at connection points
-        
-        // Randomly lock some doors
-        // bool shouldLock = Random.value < 0.3f; // 30% chance to be locked
+        // Room connections handled by door prefabs in rooms
+        // This is a placeholder for more complex connection logic
     }
     #endregion
 
-    #region Phase 3: Distribute Items
+    #region Distribute Items
     private void DistributeItems()
     {
-        int keysToPlace = Random.Range(1, 4);
-        int fusesToPlace = Random.Range(1, 3);
-        int essenceToPlace = Random.Range(5, 15);
-        int consumablesToPlace = Random.Range(2, 6);
-
-        // Get all available spawn points
         List<Transform> availableSpawnPoints = new List<Transform>();
+        
         foreach (Room room in generatedRooms)
         {
             if (room.Type != Room.RoomType.StartRoom)
@@ -341,31 +249,23 @@ public class LevelGenerator : MonoBehaviour
         int spawnIndex = 0;
 
         // Place keys
-        for (int i = 0; i < keysToPlace && spawnIndex < availableSpawnPoints.Count; i++)
+        for (int i = 0; i < Random.Range(1, 4) && spawnIndex < availableSpawnPoints.Count; i++)
         {
             SpawnItem(keyPrefab, availableSpawnPoints[spawnIndex]);
             spawnIndex++;
         }
 
         // Place fuses
-        for (int i = 0; i < fusesToPlace && spawnIndex < availableSpawnPoints.Count; i++)
+        for (int i = 0; i < Random.Range(1, 3) && spawnIndex < availableSpawnPoints.Count; i++)
         {
             SpawnItem(fusePrefab, availableSpawnPoints[spawnIndex]);
             spawnIndex++;
         }
 
-        // Place fear essence
-        for (int i = 0; i < essenceToPlace && spawnIndex < availableSpawnPoints.Count; i++)
+        // Place essence
+        for (int i = 0; i < Random.Range(5, 15) && spawnIndex < availableSpawnPoints.Count; i++)
         {
             SpawnItem(fearEssencePrefab, availableSpawnPoints[spawnIndex]);
-            spawnIndex++;
-        }
-
-        // Place consumables
-        for (int i = 0; i < consumablesToPlace && spawnIndex < availableSpawnPoints.Count; i++)
-        {
-            GameObject consumablePrefab = consumablePrefabs[Random.Range(0, consumablePrefabs.Length)];
-            SpawnItem(consumablePrefab, availableSpawnPoints[spawnIndex]);
             spawnIndex++;
         }
     }
@@ -373,12 +273,11 @@ public class LevelGenerator : MonoBehaviour
     private void SpawnItem(GameObject prefab, Transform spawnPoint)
     {
         if (prefab == null || spawnPoint == null) return;
-
         Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
     }
     #endregion
 
-    #region Phase 4: Hiding Spots
+    #region Hiding Spots
     private void DistributeHidingSpots()
     {
         foreach (Room room in generatedRooms)
@@ -387,7 +286,7 @@ public class LevelGenerator : MonoBehaviour
             {
                 foreach (Transform spawnPoint in room.HidingSpotSpawnPoints)
                 {
-                    if (Random.value < 0.5f) // 50% chance per spawn point
+                    if (Random.value < 0.5f && hidingSpotPrefabs.Length > 0)
                     {
                         GameObject prefab = hidingSpotPrefabs[Random.Range(0, hidingSpotPrefabs.Length)];
                         Instantiate(prefab, spawnPoint.position, spawnPoint.rotation);
@@ -398,7 +297,7 @@ public class LevelGenerator : MonoBehaviour
     }
     #endregion
 
-    #region Phase 5: Player Spawn
+    #region Spawn Player
     private void SpawnPlayer()
     {
         PlayerController player = FindObjectOfType<PlayerController>();
@@ -407,19 +306,14 @@ public class LevelGenerator : MonoBehaviour
         {
             player.transform.position = startRoom.transform.position + Vector3.up * 1f;
         }
-        else if (player != null)
-        {
-            player.transform.position = Vector3.up * 1f;
-        }
     }
     #endregion
 
-    #region Phase 6: Enemy Spawn
+    #region Spawn Enemy
     private void SpawnEnemy()
     {
         if (enemyPrefab == null) return;
 
-        // Find a room far from start
         Room farthestRoom = null;
         float maxDistance = 0f;
 
@@ -449,19 +343,6 @@ public class LevelGenerator : MonoBehaviour
     }
     #endregion
 
-    #region Phase 7: NavMesh
-    private void GenerateNavMeshSurface()
-    {
-        // For NavMesh generation, you'll need to:
-        // 1. Mark floor objects as "Navigation Static"
-        // 2. Use Unity's NavMesh baking
-        
-        // In Unity 2020+, you can use NavMeshSurface component
-        // For now, this is a placeholder for manual NavMesh baking
-        Debug.Log("NavMesh generation requires NavMeshSurface component or manual baking");
-    }
-    #endregion
-
     #region Utilities
     private void ShuffleList<T>(List<T> list)
     {
@@ -475,10 +356,8 @@ public class LevelGenerator : MonoBehaviour
     }
     #endregion
 
-    #region Debug
     private void OnDrawGizmos()
     {
-        // Draw room grid
         Gizmos.color = Color.gray;
         foreach (var kvp in roomGrid)
         {
@@ -486,5 +365,4 @@ public class LevelGenerator : MonoBehaviour
             Gizmos.DrawWireCube(pos, new Vector3(roomSpacing - 1f, 4f, roomSpacing - 1f));
         }
     }
-    #endregion
 }

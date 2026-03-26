@@ -1,21 +1,20 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Death screen shown when player is caught.
-/// Displays run stats and allows proceeding to shop or restarting.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class DeathScreen : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private GameObject deathPanel;
-    [SerializeField] private Text essenceEarnedText;
-    [SerializeField] private Text totalEssenceText;
-    [SerializeField] private Text survivalTimeText;
-    [SerializeField] private Text runCountText;
+    [SerializeField] private TextMeshProUGUI essenceEarnedText;
+    [SerializeField] private TextMeshProUGUI totalEssenceText;
+    [SerializeField] private TextMeshProUGUI runCountText;
     [SerializeField] private Button shopButton;
     [SerializeField] private Button restartButton;
-    [SerializeField] private Button mainMenuButton;
 
     [Header("Audio")]
     [SerializeField] private AudioClip showSound;
@@ -33,27 +32,13 @@ public class DeathScreen : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
         }
 
-        // Initially hidden
         if (deathPanel != null)
         {
             deathPanel.SetActive(false);
         }
 
-        // Button listeners
-        if (shopButton != null)
-        {
-            shopButton.onClick.AddListener(OpenShop);
-        }
-
-        if (restartButton != null)
-        {
-            restartButton.onClick.AddListener(RestartRun);
-        }
-
-        if (mainMenuButton != null)
-        {
-            mainMenuButton.onClick.AddListener(ReturnToMainMenu);
-        }
+        if (shopButton != null) shopButton.onClick.AddListener(OpenShop);
+        if (restartButton != null) restartButton.onClick.AddListener(RestartRun);
     }
 
     private void Start()
@@ -79,7 +64,6 @@ public class DeathScreen : MonoBehaviour
             deathPanel.SetActive(true);
         }
 
-        // Update stats display
         if (gameState != null)
         {
             if (essenceEarnedText != null)
@@ -98,11 +82,9 @@ public class DeathScreen : MonoBehaviour
             }
         }
 
-        // Unlock cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Play sound
         if (showSound != null && audioSource != null)
         {
             audioSource.PlayOneShot(showSound);
@@ -136,12 +118,5 @@ public class DeathScreen : MonoBehaviour
         {
             gameState.RestartRun();
         }
-    }
-
-    private void ReturnToMainMenu()
-    {
-        HideDeathScreen();
-        Time.timeScale = 1f;
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
     }
 }

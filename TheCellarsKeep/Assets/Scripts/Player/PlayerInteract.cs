@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Handles player interaction with objects (items, doors, hiding spots).
-/// Uses raycasting to detect interactables within range.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class PlayerInteract : MonoBehaviour
 {
@@ -13,7 +13,7 @@ public class PlayerInteract : MonoBehaviour
     [SerializeField] private KeyCode hideKey = KeyCode.Q;
 
     [Header("UI References")]
-    [SerializeField] private UnityEngine.UI.Text interactPromptText;
+    [SerializeField] private TMPro.TextMeshProUGUI interactPromptText;
 
     [Header("Hiding Settings")]
     [SerializeField] private Transform playerCamera;
@@ -102,10 +102,7 @@ public class PlayerInteract : MonoBehaviour
         spot.EnterHidingSpot(this);
         UpdatePrompt("Press E or Q to exit");
         
-        // Disable player controller
         GetComponent<PlayerController>().enabled = false;
-        
-        // Notify AI of hiding state change
         OnHidingStateChanged?.Invoke(true);
     }
 
@@ -120,10 +117,7 @@ public class PlayerInteract : MonoBehaviour
         currentHidingSpot = null;
         UpdatePrompt("");
         
-        // Re-enable player controller
         GetComponent<PlayerController>().enabled = true;
-        
-        // Notify AI of hiding state change
         OnHidingStateChanged?.Invoke(false);
     }
 
@@ -153,7 +147,7 @@ public class PlayerInteract : MonoBehaviour
 }
 
 /// <summary>
-/// Interface for all interactable objects (items, doors, switches).
+/// Interface for all interactable objects.
 /// </summary>
 public interface IInteractable
 {

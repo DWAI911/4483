@@ -2,21 +2,21 @@ using UnityEngine;
 
 /// <summary>
 /// Defines a room for procedural generation.
-/// Each room has connection points (doors) that link to other rooms.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class Room : MonoBehaviour
 {
     public enum RoomType
     {
-        StartRoom,      // Player spawn
-        EndRoom,        // Exit door
-        Corridor,       // Connecting passage
-        Library,        // Lore notes, items
-        Kitchen,        // Items
-        Bedroom,        // Hiding spots, items
-        Basement,       // Dark, difficult
-        Attic,          // High value items
-        SafeRoom        // Meta-shop access
+        StartRoom,
+        EndRoom,
+        Corridor,
+        Library,
+        Kitchen,
+        Bedroom,
+        Basement,
+        Attic,
+        SafeRoom
     }
 
     [Header("Room Settings")]
@@ -24,7 +24,7 @@ public class Room : MonoBehaviour
     [SerializeField] private Vector3 roomSize = new Vector3(10f, 4f, 10f);
 
     [Header("Connection Points")]
-    [SerializeField] private Transform[] connectionPoints; // Door positions
+    [SerializeField] private Transform[] connectionPoints;
     
     [Header("Spawn Points")]
     [SerializeField] private Transform[] itemSpawnPoints;
@@ -38,13 +38,8 @@ public class Room : MonoBehaviour
     [SerializeField] private Light[] roomLights;
     [SerializeField] private bool lightsOnByDefault = true;
 
-    [Header("Fog")]
-    [SerializeField] private bool hasFog = true;
-    [SerializeField] private float fogDensity = 0.02f;
-
     // Runtime data
     private bool hasBeenVisited = false;
-    private int connectedDoors = 0;
 
     public RoomType Type => roomType;
     public Vector3 Size => roomSize;
@@ -59,10 +54,10 @@ public class Room : MonoBehaviour
     {
         hasBeenVisited = false;
         
-        // Set up lighting
         foreach (Light light in roomLights)
         {
-            light.enabled = lightsOnByDefault;
+            if (light != null)
+                light.enabled = lightsOnByDefault;
         }
     }
 
@@ -71,7 +66,6 @@ public class Room : MonoBehaviour
         if (!hasBeenVisited)
         {
             hasBeenVisited = true;
-            // Could trigger events here (enemy spawn, etc.)
         }
     }
 
@@ -80,9 +74,7 @@ public class Room : MonoBehaviour
         foreach (Light light in roomLights)
         {
             if (light != null)
-            {
                 light.enabled = on;
-            }
         }
     }
 
@@ -103,9 +95,7 @@ public class Room : MonoBehaviour
         foreach (Door door in doors)
         {
             if (door != null)
-            {
                 door.CloseDoor();
-            }
         }
     }
 
@@ -114,19 +104,15 @@ public class Room : MonoBehaviour
         foreach (Door door in doors)
         {
             if (door != null)
-            {
                 door.OpenDoor();
-            }
         }
     }
 
     private void OnDrawGizmosSelected()
     {
-        // Draw room bounds
         Gizmos.color = Color.white;
         Gizmos.DrawWireCube(transform.position, roomSize);
 
-        // Draw connection points
         if (connectionPoints != null)
         {
             Gizmos.color = Color.green;
@@ -140,7 +126,6 @@ public class Room : MonoBehaviour
             }
         }
 
-        // Draw item spawn points
         if (itemSpawnPoints != null)
         {
             Gizmos.color = Color.yellow;
@@ -153,20 +138,6 @@ public class Room : MonoBehaviour
             }
         }
 
-        // Draw hiding spot spawn points
-        if (hidingSpotSpawnPoints != null)
-        {
-            Gizmos.color = Color.cyan;
-            foreach (Transform point in hidingSpotSpawnPoints)
-            {
-                if (point != null)
-                {
-                    Gizmos.DrawSphere(point.position, 0.3f);
-                }
-            }
-        }
-
-        // Draw enemy spawn point
         if (enemySpawnPoint != null)
         {
             Gizmos.color = Color.red;

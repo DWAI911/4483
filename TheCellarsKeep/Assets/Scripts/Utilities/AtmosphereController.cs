@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Controls atmospheric effects like fog, post-processing, and ambient lighting.
-/// Can be triggered by game events (chase, death, etc.).
+/// Controls atmospheric effects like fog and ambient lighting.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class AtmosphereController : MonoBehaviour
 {
@@ -28,17 +28,14 @@ public class AtmosphereController : MonoBehaviour
 
     private void Awake()
     {
-        // Initialize fog
         RenderSettings.fog = enableFog;
         RenderSettings.fogColor = normalFogColor;
         RenderSettings.fogDensity = normalFogDensity;
         RenderSettings.fogMode = FogMode.Exponential;
 
-        // Initialize ambient
         RenderSettings.ambientLight = normalAmbientColor;
         RenderSettings.ambientMode = AmbientMode.Flat;
 
-        // Set targets
         targetFogDensity = normalFogDensity;
         targetFogColor = normalFogColor;
         targetAmbientColor = normalAmbientColor;
@@ -62,7 +59,6 @@ public class AtmosphereController : MonoBehaviour
 
     private void Update()
     {
-        // Smoothly transition fog
         RenderSettings.fogDensity = Mathf.Lerp(
             RenderSettings.fogDensity,
             targetFogDensity,
@@ -117,10 +113,5 @@ public class AtmosphereController : MonoBehaviour
         targetFogColor = fogColor;
         targetFogDensity = fogDensity;
         targetAmbientColor = ambientColor;
-    }
-
-    public void ResetToNormal()
-    {
-        SetDangerMode(false);
     }
 }

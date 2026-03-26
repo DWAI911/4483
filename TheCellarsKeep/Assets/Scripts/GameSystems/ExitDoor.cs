@@ -2,26 +2,22 @@ using UnityEngine;
 
 /// <summary>
 /// Exit door that requires fuses to power and allows the player to escape.
-/// This is the win condition for each run.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class ExitDoor : MonoBehaviour, IInteractable
 {
     [Header("Exit Settings")]
     [SerializeField] private int fusesRequired = 3;
-    [SerializeField] private Transform exitPosition;
     [SerializeField] private bool isPowered = false;
 
     [Header("Visual Feedback")]
     [SerializeField] private Light[] powerLights;
     [SerializeField] private ParticleSystem powerParticles;
-    [SerializeField] private Material poweredMaterial;
-    [SerializeField] private Material unpoweredMaterial;
     [SerializeField] private Renderer doorRenderer;
 
     [Header("Audio")]
     [SerializeField] private AudioClip fuseInsertSound;
     [SerializeField] private AudioClip powerOnSound;
-    [SerializeField] private AudioClip doorOpenSound;
     [SerializeField] private AudioClip escapeSound;
 
     [Header("Animation")]
@@ -37,7 +33,7 @@ public class ExitDoor : MonoBehaviour, IInteractable
     public int FusesRequired => fusesRequired;
     public int CurrentFuses => currentFuses;
 
-    public event System.Action<int, int> OnFuseInserted; // (current, required)
+    public event System.Action<int, int> OnFuseInserted;
     public event System.Action OnExitActivated;
 
     private void Awake()
@@ -55,38 +51,31 @@ public class ExitDoor : MonoBehaviour, IInteractable
     public void Interact(PlayerInteract player)
     {
         PlayerInventory inventory = player.GetComponent<PlayerInventory>();
-        GameStateManager gameState = GameStateManager.Instance;
 
         if (inventory == null) return;
 
         if (isPowered)
         {
-            // Escape!
             Escape(player);
         }
         else if (inventory.Fuses > 0)
         {
-            // Insert fuse
-            InsertFuse(inventory, gameState);
+            InsertFuse(inventory);
         }
     }
 
-    private void InsertFuse(PlayerInventory inventory, GameStateManager gameState)
+    private void InsertFuse(PlayerInventory inventory)
     {
         if (currentFuses >= fusesRequired) return;
 
         inventory.UseFuse();
         currentFuses++;
 
-        // Play insert sound
         PlaySound(fuseInsertSound);
-
-        // Fire event
         OnFuseInserted?.Invoke(currentFuses, fusesRequired);
 
         Debug.Log($"Fuse inserted: {currentFuses}/{fusesRequired}");
 
-        // Check if powered
         if (currentFuses >= fusesRequired)
         {
             ActivatePower();
@@ -99,7 +88,6 @@ public class ExitDoor : MonoBehaviour, IInteractable
     {
         isPowered = true;
 
-        // Play power on sound and effects
         PlaySound(powerOnSound);
 
         if (powerParticles != null)
@@ -107,7 +95,6 @@ public class ExitDoor : MonoBehaviour, IInteractable
             powerParticles.Play();
         }
 
-        // Update lights to full power
         foreach (Light light in powerLights)
         {
             if (light != null)
@@ -118,7 +105,6 @@ public class ExitDoor : MonoBehaviour, IInteractable
         }
 
         OnExitActivated?.Invoke();
-
         Debug.Log("Exit powered! You can escape!");
     }
 
@@ -126,10 +112,8 @@ public class ExitDoor : MonoBehaviour, IInteractable
     {
         if (!isPowered) return;
 
-        // Play escape sound
         PlaySound(escapeSound);
 
-        // Trigger animation
         if (doorAnimator != null)
         {
             doorAnimator.SetTrigger(openAnimationTrigger);
@@ -137,7 +121,6 @@ public class ExitDoor : MonoBehaviour, IInteractable
 
         isOpen = true;
 
-        // Notify game state manager
         GameStateManager gameState = GameStateManager.Instance;
         if (gameState != null)
         {
@@ -149,7 +132,6 @@ public class ExitDoor : MonoBehaviour, IInteractable
 
     private void UpdateVisuals()
     {
-        // Update lights based on fuse count
         for (int i = 0; i < powerLights.Length; i++)
         {
             if (powerLights[i] != null)
@@ -157,12 +139,6 @@ public class ExitDoor : MonoBehaviour, IInteractable
                 powerLights[i].enabled = (i < currentFuses) || isPowered;
                 powerLights[i].color = isPowered ? Color.green : Color.yellow;
             }
-        }
-
-        // Update material
-        if (doorRenderer != null && poweredMaterial != null && unpoweredMaterial != null)
-        {
-            doorRenderer.material = isPowered ? poweredMaterial : unpoweredMaterial;
         }
     }
 
@@ -190,33 +166,11 @@ public class ExitDoor : MonoBehaviour, IInteractable
         }
     }
 
-    private void OnTriggerEnter(Collider other)
-    {
-        if (other.CompareTag("Player") && isPowered && isOpen)
-        {
-            // Auto-trigger escape when player walks through open door
-            PlayerInteract player = other.GetComponent<PlayerInteract>();
-            if (player != null)
-            {
-                Escape(player);
-            }
-        }
-    }
-
     public void ResetExit()
     {
         currentFuses = 0;
         isPowered = false;
         isOpen = false;
         UpdateVisuals();
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        if (exitPosition != null)
-        {
-            Gizmos.color = Color.green;
-            Gizmos.DrawSphere(exitPosition.position, 0.5f);
-        }
     }
 }

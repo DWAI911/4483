@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Meta-shop system for purchasing items between runs.
-/// Players spend Fear Essence earned from previous runs.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class ShopSystem : MonoBehaviour
 {
@@ -14,9 +14,9 @@ public class ShopSystem : MonoBehaviour
         public string itemName;
         [TextArea] public string description;
         public int baseCost;
-        public int maxPurchaseCount = 1; // 1 = one-time purchase, 0 = unlimited
+        public int maxPurchaseCount = 1;
         public Sprite icon;
-        public ConsumableItem consumableRef; // For consumables
+        public ConsumableItem consumableRef;
         public bool unlockedByDefault = false;
     }
 
@@ -33,8 +33,8 @@ public class ShopSystem : MonoBehaviour
     [Header("UI References")]
     [SerializeField] private Transform shopPanel;
     [SerializeField] private GameObject shopItemPrefab;
-    [SerializeField] private UnityEngine.UI.Text essenceText;
-    [SerializeField] private UnityEngine.UI.Text selectedItemDescription;
+    [SerializeField] private TMPro.TextMeshProUGUI essenceText;
+    [SerializeField] private TMPro.TextMeshProUGUI selectedItemDescription;
     [SerializeField] private UnityEngine.UI.Button purchaseButton;
 
     [Header("Audio")]
@@ -81,17 +81,13 @@ public class ShopSystem : MonoBehaviour
     {
         if (shopItemPrefab == null || shopPanel == null) return;
 
-        // Clear existing items
         foreach (Transform child in shopPanel)
         {
             Destroy(child.gameObject);
         }
 
-        // Create items for each category
         foreach (ShopCategory category in categories)
         {
-            // Could add category header here
-            
             foreach (ShopItem item in category.items)
             {
                 CreateShopItemUI(item);
@@ -102,11 +98,8 @@ public class ShopSystem : MonoBehaviour
     private void CreateShopItemUI(ShopItem item)
     {
         GameObject itemObj = Instantiate(shopItemPrefab, shopPanel);
-        
-        // This would reference your specific UI prefab structure
-        // For now, we'll set up basic UI elements
-        
         ShopItemUI itemUI = itemObj.GetComponent<ShopItemUI>();
+        
         if (itemUI == null)
         {
             itemUI = itemObj.AddComponent<ShopItemUI>();
@@ -143,26 +136,18 @@ public class ShopSystem : MonoBehaviour
         if (!CanAffordItem(item))
         {
             PlaySound(cannotAffordSound);
-            Debug.Log($"Cannot afford {item.itemName}");
             return false;
         }
 
         if (IsItemFullyPurchased(item))
         {
-            Debug.Log($"{item.itemName} already fully purchased");
             return false;
         }
 
-        // Process purchase
         if (gameState.PurchaseItem(item.itemId, cost))
         {
             PlaySound(purchaseSound);
             OnItemPurchased?.Invoke(item);
-            
-            // If it's a consumable, add to player inventory for next run
-            // This would be handled by the game state manager
-            
-            Debug.Log($"Purchased: {item.itemName}");
             return true;
         }
 
@@ -171,11 +156,9 @@ public class ShopSystem : MonoBehaviour
 
     public int GetItemCost(ShopItem item)
     {
-        // Could implement dynamic pricing based on purchase count
         int purchaseCount = gameState.GetPurchaseCount(item.itemId);
         
-        // Simple scaling: cost increases by 20% per purchase
-        if (item.maxPurchaseCount == 0) // Unlimited purchases
+        if (item.maxPurchaseCount == 0)
         {
             return Mathf.RoundToInt(item.baseCost * (1f + purchaseCount * 0.2f));
         }
@@ -190,15 +173,9 @@ public class ShopSystem : MonoBehaviour
 
     public bool IsItemFullyPurchased(ShopItem item)
     {
-        if (item.maxPurchaseCount == 0) return false; // Unlimited
+        if (item.maxPurchaseCount == 0) return false;
         if (item.unlockedByDefault) return true;
-        
         return gameState.GetPurchaseCount(item.itemId) >= item.maxPurchaseCount;
-    }
-
-    public bool IsItemPurchased(ShopItem item)
-    {
-        return gameState.GetPurchaseCount(item.itemId) > 0 || item.unlockedByDefault;
     }
 
     private void UpdateEssenceDisplay()
@@ -216,26 +193,6 @@ public class ShopSystem : MonoBehaviour
             audioSource.PlayOneShot(clip);
         }
     }
-
-    #region Helper Methods for Starting Items
-    public List<ShopItem> GetPurchasedStartingItems()
-    {
-        List<ShopItem> startingItems = new List<ShopItem>();
-
-        foreach (ShopCategory category in categories)
-        {
-            foreach (ShopItem item in category.items)
-            {
-                if (IsItemPurchased(item) && item.consumableRef != null)
-                {
-                    startingItems.Add(item);
-                }
-            }
-        }
-
-        return startingItems;
-    }
-    #endregion
 }
 
 /// <summary>
@@ -244,8 +201,8 @@ public class ShopSystem : MonoBehaviour
 public class ShopItemUI : MonoBehaviour
 {
     [SerializeField] private UnityEngine.UI.Image iconImage;
-    [SerializeField] private UnityEngine.UI.Text nameText;
-    [SerializeField] private UnityEngine.UI.Text costText;
+    [SerializeField] private TMPro.TextMeshProUGUI nameText;
+    [SerializeField] private TMPro.TextMeshProUGUI costText;
     [SerializeField] private UnityEngine.UI.Button itemButton;
 
     private ShopSystem.ShopItem item;

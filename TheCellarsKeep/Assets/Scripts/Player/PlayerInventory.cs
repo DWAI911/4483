@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 /// <summary>
 /// Manages player inventory - keys, fuses, consumables, and currency.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class PlayerInventory : MonoBehaviour
 {
@@ -17,8 +18,8 @@ public class PlayerInventory : MonoBehaviour
     // Current inventory state
     private int currentKeys;
     private int currentFuses;
-    private int fearEssence; // Currency earned this run
-    private int totalFearEssence; // Currency across all runs
+    private int fearEssence;
+    private int totalFearEssence;
     private List<ConsumableItem> consumables = new List<ConsumableItem>();
 
     // Public properties
@@ -50,7 +51,6 @@ public class PlayerInventory : MonoBehaviour
         
         currentKeys++;
         OnKeysChanged?.Invoke(currentKeys);
-        Debug.Log($"Key added. Total keys: {currentKeys}");
         return true;
     }
 
@@ -60,7 +60,6 @@ public class PlayerInventory : MonoBehaviour
         
         currentKeys--;
         OnKeysChanged?.Invoke(currentKeys);
-        Debug.Log($"Key used. Remaining keys: {currentKeys}");
         return true;
     }
     #endregion
@@ -72,7 +71,6 @@ public class PlayerInventory : MonoBehaviour
         
         currentFuses++;
         OnFusesChanged?.Invoke(currentFuses);
-        Debug.Log($"Fuse added. Total fuses: {currentFuses}");
         return true;
     }
 
@@ -82,24 +80,20 @@ public class PlayerInventory : MonoBehaviour
         
         currentFuses--;
         OnFusesChanged?.Invoke(currentFuses);
-        Debug.Log($"Fuse used. Remaining fuses: {currentFuses}");
         return true;
     }
     #endregion
 
-    #region Fear Essence (Currency)
+    #region Fear Essence
     public void AddFearEssence(int amount)
     {
         fearEssence += amount;
         OnFearEssenceChanged?.Invoke(fearEssence);
-        Debug.Log($"Fear Essence +{amount}. Current: {fearEssence}");
     }
 
     public void BankFearEssence()
     {
-        // Called when player dies - saves earned essence for shop
         totalFearEssence += fearEssence;
-        Debug.Log($"Banked {fearEssence} Fear Essence. Total: {totalFearEssence}");
         fearEssence = 0;
     }
 
@@ -126,7 +120,6 @@ public class PlayerInventory : MonoBehaviour
 
         consumables.Add(item);
         OnConsumableAdded?.Invoke(item);
-        Debug.Log($"Consumable added: {item.ItemName}");
         return true;
     }
 
@@ -138,7 +131,6 @@ public class PlayerInventory : MonoBehaviour
         item.Use(player);
         consumables.RemoveAt(index);
         OnConsumableUsed?.Invoke(item);
-        Debug.Log($"Used consumable: {item.ItemName}");
         return true;
     }
 
@@ -154,7 +146,6 @@ public class PlayerInventory : MonoBehaviour
     }
     #endregion
 
-    #region Save/Load
     public void ResetInventory()
     {
         currentKeys = 0;
@@ -166,5 +157,4 @@ public class PlayerInventory : MonoBehaviour
         OnFusesChanged?.Invoke(currentFuses);
         OnFearEssenceChanged?.Invoke(fearEssence);
     }
-    #endregion
 }

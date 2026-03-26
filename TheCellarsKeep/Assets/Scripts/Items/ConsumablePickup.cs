@@ -1,8 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Pickup for consumable items (flashbang, decoy, stamina pill).
-/// Adds the consumable to player inventory.
+/// Pickup for consumable items.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class ConsumablePickup : ItemPickup
 {

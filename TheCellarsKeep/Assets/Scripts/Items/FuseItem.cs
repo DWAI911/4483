@@ -1,13 +1,13 @@
 using UnityEngine;
 
 /// <summary>
-/// Fuse item used to power the exit door/elevator.
-/// Multiple fuses may be required to escape.
+/// Fuse item used to power the exit door.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class FuseItem : ItemPickup
 {
     [Header("Fuse Settings")]
-    [SerializeField] private bool isGoldFuse = false; // Special fuse worth more
+    [SerializeField] private bool isGoldFuse = false;
 
     public bool IsGoldFuse => isGoldFuse;
 

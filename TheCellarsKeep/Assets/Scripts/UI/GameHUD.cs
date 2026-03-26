@@ -1,8 +1,10 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
-/// Main HUD displaying player stats, inventory, and game state.
+/// Main HUD displaying player stats and inventory.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class GameHUD : MonoBehaviour
 {
@@ -13,14 +15,12 @@ public class GameHUD : MonoBehaviour
     [SerializeField] private Color staminaLowColor = Color.red;
 
     [Header("Inventory Display")]
-    [SerializeField] private Text keyCountText;
-    [SerializeField] private Text fuseCountText;
-    [SerializeField] private Text essenceCountText;
-    [SerializeField] private Transform consumableContainer;
-    [SerializeField] private GameObject consumableSlotPrefab;
+    [SerializeField] private TextMeshProUGUI keyCountText;
+    [SerializeField] private TextMeshProUGUI fuseCountText;
+    [SerializeField] private TextMeshProUGUI essenceCountText;
 
     [Header("Interaction")]
-    [SerializeField] private Text interactPrompt;
+    [SerializeField] private TextMeshProUGUI interactPrompt;
     [SerializeField] private GameObject crosshair;
 
     [Header("AI State")]
@@ -29,7 +29,7 @@ public class GameHUD : MonoBehaviour
     [SerializeField] private float dangerPulseSpeed = 2f;
 
     [Header("Objectives")]
-    [SerializeField] private Text objectiveText;
+    [SerializeField] private TextMeshProUGUI objectiveText;
     [SerializeField] private GameObject objectivePanel;
 
     [Header("References")]
@@ -47,26 +47,9 @@ public class GameHUD : MonoBehaviour
 
     private void FindReferences()
     {
-        if (player == null)
-        {
-            player = FindObjectOfType<PlayerController>();
-        }
-
-        if (inventory == null)
-        {
-            inventory = FindObjectOfType<PlayerInventory>();
-        }
-
-        if (enemy == null)
-        {
-            enemy = FindObjectOfType<AIChaser>();
-        }
-
-        // Subscribe to events
-        if (player != null)
-        {
-            // Stamina would be updated in Update loop for now
-        }
+        if (player == null) player = FindObjectOfType<PlayerController>();
+        if (inventory == null) inventory = FindObjectOfType<PlayerInventory>();
+        if (enemy == null) enemy = FindObjectOfType<AIChaser>();
 
         if (inventory != null)
         {
@@ -83,8 +66,6 @@ public class GameHUD : MonoBehaviour
 
     private void InitializeHUD()
     {
-        // Set initial values
-        UpdateStaminaDisplay(100f, 100f);
         UpdateKeyDisplay(0);
         UpdateFuseDisplay(0);
         UpdateEssenceDisplay(0);
@@ -94,10 +75,7 @@ public class GameHUD : MonoBehaviour
             dangerIndicator.SetActive(false);
         }
 
-        if (objectivePanel != null)
-        {
-            UpdateObjective("Find 3 fuses to power the exit");
-        }
+        UpdateObjective("Find 3 fuses to power the exit");
     }
 
     private void Update()
@@ -106,7 +84,6 @@ public class GameHUD : MonoBehaviour
         UpdateDangerIndicator();
     }
 
-    #region Player Stats
     private void UpdateStamina()
     {
         if (player == null || staminaSlider == null) return;
@@ -122,16 +99,6 @@ public class GameHUD : MonoBehaviour
         }
     }
 
-    private void UpdateStaminaDisplay(float current, float max)
-    {
-        if (staminaSlider != null)
-        {
-            staminaSlider.value = current / max;
-        }
-    }
-    #endregion
-
-    #region Inventory Display
     private void UpdateKeyDisplay(int count)
     {
         if (keyCountText != null)
@@ -144,7 +111,8 @@ public class GameHUD : MonoBehaviour
     {
         if (fuseCountText != null)
         {
-            fuseCountText.text = $"Fuses: {count}/{GameStateManager.Instance?.FusesRequired ?? 3}";
+            int required = GameStateManager.Instance != null ? GameStateManager.Instance.FusesRequired : 3;
+            fuseCountText.text = $"Fuses: {count}/{required}";
         }
     }
 
@@ -172,9 +140,7 @@ public class GameHUD : MonoBehaviour
             interactPrompt.gameObject.SetActive(false);
         }
     }
-    #endregion
 
-    #region AI State
     private void OnAIStateChanged(AIChaser.AIState state)
     {
         isDangerActive = (state == AIChaser.AIState.Chasing);
@@ -183,8 +149,6 @@ public class GameHUD : MonoBehaviour
         {
             dangerIndicator.SetActive(isDangerActive);
         }
-
-        // Could also change screen effects (vignette, color, etc.)
     }
 
     private void UpdateDangerIndicator()
@@ -196,9 +160,7 @@ public class GameHUD : MonoBehaviour
         color.a = pulse;
         dangerPulse.color = color;
     }
-    #endregion
 
-    #region Objectives
     public void UpdateObjective(string text)
     {
         if (objectiveText != null)
@@ -206,25 +168,6 @@ public class GameHUD : MonoBehaviour
             objectiveText.text = text;
         }
     }
-
-    public void ShowObjective(bool show)
-    {
-        if (objectivePanel != null)
-        {
-            objectivePanel.SetActive(show);
-        }
-    }
-    #endregion
-
-    #region Crosshair
-    public void SetCrosshairActive(bool active)
-    {
-        if (crosshair != null)
-        {
-            crosshair.SetActive(active);
-        }
-    }
-    #endregion
 
     private void OnDestroy()
     {

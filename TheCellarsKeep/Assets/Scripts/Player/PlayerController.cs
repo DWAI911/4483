@@ -3,6 +3,7 @@ using UnityEngine;
 /// <summary>
 /// Main player controller handling movement, camera, stamina, and noise generation.
 /// Designed for horror gameplay with walk/run mechanics.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
@@ -53,7 +54,7 @@ public class PlayerController : MonoBehaviour
     private float lastNoiseTime;
     private bool flashlightOn = false;
 
-    // Public properties for other systems
+    // Public properties
     public bool IsRunning => isRunning;
     public bool IsMoving { get; private set; }
     public float CurrentStamina => currentStamina;
@@ -61,7 +62,7 @@ public class PlayerController : MonoBehaviour
     public float NoiseRadius { get; private set; }
     public Vector3 Position => transform.position;
 
-    // Events for other systems to subscribe to
+    // Events
     public event System.Action<float> OnNoiseGenerated;
     public event System.Action OnDeath;
 
@@ -71,7 +72,7 @@ public class PlayerController : MonoBehaviour
         
         if (cameraTransform == null)
         {
-            Debug.LogError("Camera Transform not assigned! Please assign in Inspector.");
+            Debug.LogError("Camera Transform not assigned!");
             enabled = false;
             return;
         }
@@ -79,7 +80,6 @@ public class PlayerController : MonoBehaviour
         cameraStartPosition = cameraTransform.localPosition;
         currentStamina = maxStamina;
         
-        // Lock cursor for FPS control
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
@@ -105,7 +105,7 @@ public class PlayerController : MonoBehaviour
         
         if (isGrounded && velocity.y < 0)
         {
-            velocity.y = -2f; // Small downward force to stay grounded
+            velocity.y = -2f;
         }
     }
 
@@ -114,10 +114,8 @@ public class PlayerController : MonoBehaviour
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * Time.deltaTime;
 
-        // Horizontal rotation (player body)
         transform.Rotate(Vector3.up * mouseX);
 
-        // Vertical rotation (camera only)
         verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, minVerticalAngle, maxVerticalAngle);
         cameraTransform.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
@@ -131,7 +129,6 @@ public class PlayerController : MonoBehaviour
         Vector3 moveDirection = transform.right * horizontal + transform.forward * vertical;
         IsMoving = moveDirection.magnitude > 0.1f;
 
-        // Check if trying to run (holding Shift) and has stamina
         isRunning = Input.GetKey(KeyCode.LeftShift) && currentStamina > 0 && IsMoving;
 
         float speed = isRunning ? runSpeed : walkSpeed;
@@ -168,7 +165,6 @@ public class PlayerController : MonoBehaviour
     {
         if (!IsMoving || !isGrounded)
         {
-            // Reset camera position smoothly
             cameraTransform.localPosition = Vector3.Lerp(
                 cameraTransform.localPosition,
                 cameraStartPosition,
@@ -214,7 +210,6 @@ public class PlayerController : MonoBehaviour
 
         NoiseRadius = isRunning ? runNoiseRadius : walkNoiseRadius;
 
-        // Emit noise at intervals (not every frame)
         if (Time.time - lastNoiseTime >= noiseUpdateInterval && NoiseRadius > 0)
         {
             lastNoiseTime = Time.time;
@@ -231,7 +226,6 @@ public class PlayerController : MonoBehaviour
     public void Kill()
     {
         OnDeath?.Invoke();
-        // Game state manager will handle respawn/shop
     }
 
     public void ResetStamina()
@@ -242,7 +236,6 @@ public class PlayerController : MonoBehaviour
 
     private void OnDrawGizmosSelected()
     {
-        // Visualize noise radius
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, walkNoiseRadius);
         Gizmos.color = Color.red;

@@ -1,7 +1,8 @@
 using UnityEngine;
 
 /// <summary>
-/// Handles player footstep audio based on movement and surface type.
+/// Handles player footstep audio.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 [RequireComponent(typeof(PlayerController))]
 public class PlayerFootsteps : MonoBehaviour
@@ -26,10 +27,8 @@ public class PlayerFootsteps : MonoBehaviour
     [Header("Audio Source")]
     [SerializeField] private AudioSource footstepSource;
 
-    // References
     private PlayerController playerController;
     private float stepTimer;
-    private bool wasMoving = false;
 
     private void Awake()
     {
@@ -39,7 +38,7 @@ public class PlayerFootsteps : MonoBehaviour
         {
             footstepSource = gameObject.AddComponent<AudioSource>();
             footstepSource.playOnAwake = false;
-            footstepSource.spatialBlend = 1f; // 3D sound
+            footstepSource.spatialBlend = 1f;
         }
     }
 
@@ -52,11 +51,9 @@ public class PlayerFootsteps : MonoBehaviour
         if (!isMoving)
         {
             stepTimer = 0f;
-            wasMoving = false;
             return;
         }
 
-        // Check if we should play a footstep
         float stepInterval = playerController.IsRunning ? runStepInterval : walkStepInterval;
 
         stepTimer += Time.deltaTime;
@@ -66,28 +63,19 @@ public class PlayerFootsteps : MonoBehaviour
             PlayFootstep();
             stepTimer = 0f;
         }
-
-        wasMoving = true;
     }
 
     private void PlayFootstep()
     {
         SurfaceSounds surface = GetSurfaceSounds(defaultSurface);
 
-        if (surface == null || surface.footstepClips.Length == 0)
-        {
-            Debug.LogWarning("No footstep sounds configured!");
-            return;
-        }
+        if (surface == null || surface.footstepClips.Length == 0) return;
 
-        // Get random clip
         AudioClip clip = surface.footstepClips[Random.Range(0, surface.footstepClips.Length)];
 
-        // Set volume and pitch with variation
         footstepSource.volume = surface.volume;
         footstepSource.pitch = 1f + Random.Range(-surface.pitchVariation, surface.pitchVariation);
 
-        // Play the clip
         footstepSource.PlayOneShot(clip);
     }
 
@@ -101,7 +89,6 @@ public class PlayerFootsteps : MonoBehaviour
             }
         }
 
-        // Return first surface if named one not found
         if (surfaceTypes.Length > 0)
         {
             return surfaceTypes[0];
@@ -110,7 +97,6 @@ public class PlayerFootsteps : MonoBehaviour
         return null;
     }
 
-    // Call this when player enters a different surface trigger
     public void SetCurrentSurface(string surfaceName)
     {
         defaultSurface = surfaceName;

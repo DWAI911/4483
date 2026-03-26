@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Door that can be locked (requires key) or open freely.
-/// Connects two rooms together.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class Door : MonoBehaviour, IInteractable
 {
@@ -11,13 +11,12 @@ public class Door : MonoBehaviour, IInteractable
         Open,
         Closed,
         Locked,
-        Blocked  // Used during generation when not connected
+        Blocked
     }
 
     [Header("Door Settings")]
     [SerializeField] private DoorState initialState = DoorState.Closed;
     [SerializeField] private bool requiresKey = false;
-    [SerializeField] private int keyLevel = 1; // Different colored keys
 
     [Header("Animation")]
     [SerializeField] private Transform doorPivot;
@@ -38,7 +37,6 @@ public class Door : MonoBehaviour, IInteractable
     public bool IsOpen => currentState == DoorState.Open;
     public bool IsLocked => currentState == DoorState.Locked;
     public bool RequiresKey => requiresKey;
-    public int KeyLevel => keyLevel;
     public string InteractPrompt => GetPrompt();
 
     public Room ConnectedRoomA => connectedRoomA;
@@ -78,9 +76,6 @@ public class Door : MonoBehaviour, IInteractable
             case DoorState.Locked:
                 TryUnlock(player);
                 break;
-            case DoorState.Blocked:
-                // Can't interact with blocked doors
-                break;
         }
     }
 
@@ -88,7 +83,6 @@ public class Door : MonoBehaviour, IInteractable
     {
         if (requiresKey)
         {
-            // Check if player has key
             PlayerInventory inventory = player.GetComponent<PlayerInventory>();
             if (inventory != null && inventory.Keys > 0)
             {
@@ -97,7 +91,6 @@ public class Door : MonoBehaviour, IInteractable
             }
             else
             {
-                // Play locked sound
                 PlaySound(lockedSound);
                 Debug.Log("Door is locked! Need a key.");
                 return;
@@ -136,7 +129,6 @@ public class Door : MonoBehaviour, IInteractable
 
     public void BlockDoor()
     {
-        // Used during generation - this door doesn't connect anywhere
         currentState = DoorState.Blocked;
         if (doorPivot != null)
         {
@@ -218,8 +210,6 @@ public class Door : MonoBehaviour, IInteractable
                 return requiresKey ? "Press E to unlock (Requires Key)" : "Press E to open";
             case DoorState.Locked:
                 return "Locked (Requires Key)";
-            case DoorState.Blocked:
-                return "";
             default:
                 return "";
         }
@@ -230,12 +220,5 @@ public class Door : MonoBehaviour, IInteractable
         if (connectedRoomA == currentRoom) return connectedRoomB;
         if (connectedRoomB == currentRoom) return connectedRoomA;
         return null;
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        Gizmos.color = currentState == DoorState.Locked ? Color.red : 
-                       currentState == DoorState.Blocked ? Color.black : Color.green;
-        Gizmos.DrawCube(transform.position, Vector3.one * 0.5f);
     }
 }

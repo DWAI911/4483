@@ -3,10 +3,7 @@ using UnityEngine.AI;
 
 /// <summary>
 /// The main enemy AI that hunts the player.
-- Pathfinds to noise sources
-- Patrols when idle
-- Can be stunned
-- Learns player habits (dynamic difficulty)
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 public class AIChaser : MonoBehaviour
@@ -44,12 +41,7 @@ public class AIChaser : MonoBehaviour
     [SerializeField] private float stunDuration = 3f;
     [SerializeField] private GameObject stunEffect;
 
-    [Header("Learning Behavior")]
-    [SerializeField] private int hideCheckIncreaseRate = 2;
-    [SerializeField] private int maxHideCheckBonus = 10;
-
     [Header("Audio")]
-    [SerializeField] private AudioClip chaseMusic;
     [SerializeField] private AudioClip footstepSound;
     [SerializeField] private float footstepInterval = 0.5f;
 
@@ -65,10 +57,6 @@ public class AIChaser : MonoBehaviour
     private float losePlayerTimer = 0f;
     private float stunTimer = 0f;
     private float footstepTimer = 0f;
-
-    // Learning statistics
-    private int playerHideCount = 0;
-    private int[] hidingSpotCheckBonuses;
 
     // References
     private PlayerController player;
@@ -90,10 +78,6 @@ public class AIChaser : MonoBehaviour
         {
             audioSource = gameObject.AddComponent<AudioSource>();
         }
-
-        // Initialize hiding spot learning array
-        HidingSpot[] allHidingSpots = FindObjectsOfType<HidingSpot>();
-        hidingSpotCheckBonuses = new int[allHidingSpots.Length];
     }
 
     private void Start()
@@ -101,14 +85,10 @@ public class AIChaser : MonoBehaviour
         player = FindObjectOfType<PlayerController>();
         playerInteract = player?.GetComponent<PlayerInteract>();
         
-        // Subscribe to player noise
         if (player != null)
         {
             player.OnNoiseGenerated += OnPlayerNoise;
         }
-
-        // Subscribe to player hiding
-        PlayerInteract.OnHidingStateChanged += OnPlayerHidingStateChanged;
 
         SetState(AIState.Patrol);
     }
@@ -148,11 +128,7 @@ public class AIChaser : MonoBehaviour
     #region State Updates
     private void UpdatePatrol()
     {
-        if (patrolPoints == null || patrolPoints.Length == 0)
-        {
-            // No patrol points, just idle
-            return;
-        }
+        if (patrolPoints == null || patrolPoints.Length == 0) return;
 
         if (patrolWaitTimer > 0)
         {
@@ -162,13 +138,11 @@ public class AIChaser : MonoBehaviour
 
         if (!agent.pathPending && agent.remainingDistance < 0.5f)
         {
-            // Reached patrol point, wait then move to next
             patrolWaitTimer = waitAtPatrolPoint;
             currentPatrolIndex = (currentPatrolIndex + 1) % patrolPoints.Length;
             agent.SetDestination(patrolPoints[currentPatrolIndex].position);
         }
 
-        // Check for player
         if (CheckForPlayer())
         {
             SetState(AIState.Chasing);
@@ -179,11 +153,9 @@ public class AIChaser : MonoBehaviour
     {
         if (!agent.pathPending && agent.remainingDistance < 0.5f)
         {
-            // Reached investigation point, look around
             SetState(AIState.Searching);
         }
 
-        // Check for player during investigation
         if (CheckForPlayer())
         {
             SetState(AIState.Chasing);
@@ -192,14 +164,12 @@ public class AIChaser : MonoBehaviour
 
     private void UpdateChase()
     {
-        // Update destination to player
         if (player != null)
         {
             agent.SetDestination(player.Position);
             lastKnownPlayerPosition = player.Position;
         }
 
-        // Check if player is visible
         if (CanSeePlayer())
         {
             losePlayerTimer = 0f;
@@ -210,7 +180,6 @@ public class AIChaser : MonoBehaviour
             
             if (losePlayerTimer >= losePlayerTime)
             {
-                // Lost the player, go to last known position
                 SetState(AIState.Searching);
             }
         }
@@ -220,7 +189,6 @@ public class AIChaser : MonoBehaviour
     {
         if (!agent.pathPending && agent.remainingDistance < 0.5f)
         {
-            // Pick a random search point near last known position
             Vector3 randomPoint = lastKnownPlayerPosition + Random.insideUnitSphere * searchRadius;
             
             NavMeshHit hit;
@@ -228,12 +196,8 @@ public class AIChaser : MonoBehaviour
             {
                 agent.SetDestination(hit.position);
             }
-
-            // Check hiding spots with bonus based on player habits
-            CheckNearbyHidingSpots();
         }
 
-        // Check for player
         if (CheckForPlayer())
         {
             SetState(AIState.Chasing);
@@ -246,7 +210,6 @@ public class AIChaser : MonoBehaviour
         
         if (stunTimer <= 0)
         {
-            // Recover from stun
             SetState(AIState.Searching);
             if (stunEffect != null)
             {
@@ -259,31 +222,24 @@ public class AIChaser : MonoBehaviour
     #region Detection
     private bool CheckForPlayer()
     {
-        // Don't detect if player is hiding
-        if (playerInteract != null && playerInteract.IsHiding)
-        {
-            return false;
-        }
-
+        if (playerInteract != null && playerInteract.IsHiding) return false;
         return CanSeePlayer();
     }
 
     private bool CanSeePlayer()
     {
         if (player == null) return false;
+        if (eyePosition == null) return false;
 
         float distanceToPlayer = Vector3.Distance(eyePosition.position, player.Position);
         
-        // Check if in vision range
         if (distanceToPlayer > visionRange) return false;
 
-        // Check if in vision cone
         Vector3 directionToPlayer = (player.Position - eyePosition.position).normalized;
         float angle = Vector3.Angle(eyePosition.forward, directionToPlayer);
         
         if (angle > visionAngle * 0.5f) return false;
 
-        // Check for obstacles
         if (Physics.Linecast(eyePosition.position, player.Position, visionObstructionMask))
         {
             return false;
@@ -299,22 +255,18 @@ public class AIChaser : MonoBehaviour
 
         float distanceToPlayer = Vector3.Distance(transform.position, player.Position);
         
-        // Check if within hearing range plus noise radius
         if (distanceToPlayer <= hearingRange + noiseRadius)
         {
-            // Calculate investigation point (noise origin)
             Vector3 noiseOrigin = player.Position;
 
             if (currentState == AIState.Patrol)
             {
-                // Go investigate
                 lastKnownPlayerPosition = noiseOrigin;
                 SetState(AIState.Investigating);
                 agent.SetDestination(noiseOrigin);
             }
             else if (currentState == AIState.Investigating || currentState == AIState.Searching)
             {
-                // Escalate to chase if close enough
                 if (distanceToPlayer < hearingRange * 0.5f)
                 {
                     SetState(AIState.Chasing);
@@ -322,41 +274,6 @@ public class AIChaser : MonoBehaviour
                 else
                 {
                     agent.SetDestination(noiseOrigin);
-                }
-            }
-        }
-    }
-    #endregion
-
-    #region Learning Behavior
-    private void OnPlayerHidingStateChanged(bool isHiding)
-    {
-        if (isHiding)
-        {
-            playerHideCount++;
-            // Increase bonus for checking hiding spots
-            // This makes the AI check hiding spots more often
-        }
-    }
-
-    private void CheckNearbyHidingSpots()
-    {
-        HidingSpot[] allHidingSpots = FindObjectsOfType<HidingSpot>();
-        
-        for (int i = 0; i < allHidingSpots.Length; i++)
-        {
-            float distance = Vector3.Distance(transform.position, allHidingSpots[i].transform.position);
-            
-            if (distance < searchRadius)
-            {
-                // Check this hiding spot with probability based on learning
-                int checkBonus = (i < hidingSpotCheckBonuses.Length) ? hidingSpotCheckBonuses[i] : 0;
-                float checkProbability = 0.3f + (checkBonus * 0.1f);
-                
-                if (Random.value < checkProbability)
-                {
-                    agent.SetDestination(allHidingSpots[i].transform.position);
-                    return; // Only check one at a time
                 }
             }
         }
@@ -371,7 +288,6 @@ public class AIChaser : MonoBehaviour
         currentState = newState;
         OnStateChanged?.Invoke(newState);
 
-        // Update agent speed
         switch (currentState)
         {
             case AIState.Patrol:
@@ -436,7 +352,6 @@ public class AIChaser : MonoBehaviour
     {
         if (other.CompareTag("Player") && currentState != AIState.Stunned)
         {
-            // Caught the player!
             OnPlayerCaught?.Invoke();
             Debug.Log("CAUGHT THE PLAYER!");
         }
@@ -446,7 +361,6 @@ public class AIChaser : MonoBehaviour
     #region Gizmos
     private void OnDrawGizmosSelected()
     {
-        // Vision cone
         if (eyePosition != null)
         {
             Gizmos.color = Color.yellow;
@@ -458,11 +372,9 @@ public class AIChaser : MonoBehaviour
             Gizmos.DrawRay(eyePosition.position, eyePosition.forward * visionRange);
         }
 
-        // Hearing range
         Gizmos.color = Color.cyan;
         Gizmos.DrawWireSphere(transform.position, hearingRange);
 
-        // Patrol points
         if (patrolPoints != null)
         {
             Gizmos.color = Color.green;
@@ -476,15 +388,4 @@ public class AIChaser : MonoBehaviour
         }
     }
     #endregion
-}
-
-// Extension for PlayerInteract to track hiding state
-public static class PlayerInteractExtensions
-{
-    public static event System.Action<bool> OnHidingStateChanged;
-    
-    public static void NotifyHidingStateChanged(bool isHiding)
-    {
-        OnHidingStateChanged?.Invoke(isHiding);
-    }
 }

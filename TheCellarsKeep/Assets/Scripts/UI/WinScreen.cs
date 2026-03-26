@@ -1,21 +1,20 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Win screen shown when player successfully escapes.
-/// Displays run stats and celebrates the achievement.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class WinScreen : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private GameObject winPanel;
     [SerializeField] private GameObject trueEndingPanel;
-    [SerializeField] private Text essenceEarnedText;
-    [SerializeField] private Text totalEssenceText;
-    [SerializeField] private Text survivalTimeText;
-    [SerializeField] private Text notesCollectedText;
+    [SerializeField] private TextMeshProUGUI essenceEarnedText;
+    [SerializeField] private TextMeshProUGUI totalEssenceText;
+    [SerializeField] private TextMeshProUGUI notesCollectedText;
     [SerializeField] private Button continueButton;
-    [SerializeField] private Button mainMenuButton;
 
     [Header("Audio")]
     [SerializeField] private AudioClip winSound;
@@ -34,27 +33,10 @@ public class WinScreen : MonoBehaviour
             audioSource = gameObject.AddComponent<AudioSource>();
         }
 
-        // Initially hidden
-        if (winPanel != null)
-        {
-            winPanel.SetActive(false);
-        }
+        if (winPanel != null) winPanel.SetActive(false);
+        if (trueEndingPanel != null) trueEndingPanel.SetActive(false);
 
-        if (trueEndingPanel != null)
-        {
-            trueEndingPanel.SetActive(false);
-        }
-
-        // Button listeners
-        if (continueButton != null)
-        {
-            continueButton.onClick.AddListener(ContinueToShop);
-        }
-
-        if (mainMenuButton != null)
-        {
-            mainMenuButton.onClick.AddListener(ReturnToMainMenu);
-        }
+        if (continueButton != null) continueButton.onClick.AddListener(ContinueToShop);
     }
 
     private void Start()
@@ -86,12 +68,11 @@ public class WinScreen : MonoBehaviour
             winPanel.SetActive(true);
         }
 
-        // Update stats display
         if (gameState != null)
         {
             if (essenceEarnedText != null)
             {
-                int bonus = 50; // Escape bonus
+                int bonus = 50;
                 essenceEarnedText.text = $"Fear Essence Earned: +{gameState.CurrentRunEssence + bonus}";
             }
 
@@ -100,23 +81,15 @@ public class WinScreen : MonoBehaviour
                 totalEssenceText.text = $"Total Fear Essence: {gameState.TotalFearEssence}";
             }
 
-            if (survivalTimeText != null)
-            {
-                // This would need to be calculated from run start time
-                survivalTimeText.text = $"Escape Time: ?";
-            }
-
             if (notesCollectedText != null)
             {
                 notesCollectedText.text = $"Lore Notes: {gameState.TotalNotesCollected}/10";
             }
         }
 
-        // Unlock cursor
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Play appropriate sound
         AudioClip soundToPlay = isTrueEnding ? trueEndingSound : winSound;
         if (soundToPlay != null && audioSource != null)
         {
@@ -126,31 +99,12 @@ public class WinScreen : MonoBehaviour
 
     private void ContinueToShop()
     {
-        HideWinScreen();
+        if (winPanel != null) winPanel.SetActive(false);
+        if (trueEndingPanel != null) trueEndingPanel.SetActive(false);
         
         if (gameState != null)
         {
             gameState.OpenShop();
-        }
-    }
-
-    private void ReturnToMainMenu()
-    {
-        HideWinScreen();
-        Time.timeScale = 1f;
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MainMenu");
-    }
-
-    private void HideWinScreen()
-    {
-        if (winPanel != null)
-        {
-            winPanel.SetActive(false);
-        }
-
-        if (trueEndingPanel != null)
-        {
-            trueEndingPanel.SetActive(false);
         }
     }
 }

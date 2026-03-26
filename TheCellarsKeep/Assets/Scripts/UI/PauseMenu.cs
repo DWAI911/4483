@@ -3,7 +3,8 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Pause menu with options for resume, shop, restart, and quit.
+/// Pause menu with resume, restart, and quit options.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class PauseMenu : MonoBehaviour
 {
@@ -12,7 +13,6 @@ public class PauseMenu : MonoBehaviour
     [SerializeField] private Button resumeButton;
     [SerializeField] private Button shopButton;
     [SerializeField] private Button restartButton;
-    [SerializeField] private Button mainMenuButton;
     [SerializeField] private Button quitButton;
 
     [Header("Settings")]
@@ -24,37 +24,15 @@ public class PauseMenu : MonoBehaviour
     {
         gameState = GameStateManager.Instance;
         
-        // Initially hidden
         if (pausePanel != null)
         {
             pausePanel.SetActive(false);
         }
 
-        // Set up button listeners
-        if (resumeButton != null)
-        {
-            resumeButton.onClick.AddListener(ResumeGame);
-        }
-
-        if (shopButton != null)
-        {
-            shopButton.onClick.AddListener(OpenShop);
-        }
-
-        if (restartButton != null)
-        {
-            restartButton.onClick.AddListener(RestartRun);
-        }
-
-        if (mainMenuButton != null)
-        {
-            mainMenuButton.onClick.AddListener(ReturnToMainMenu);
-        }
-
-        if (quitButton != null)
-        {
-            quitButton.onClick.AddListener(QuitGame);
-        }
+        if (resumeButton != null) resumeButton.onClick.AddListener(ResumeGame);
+        if (shopButton != null) shopButton.onClick.AddListener(OpenShop);
+        if (restartButton != null) restartButton.onClick.AddListener(RestartRun);
+        if (quitButton != null) quitButton.onClick.AddListener(QuitGame);
     }
 
     private void Update()
@@ -121,7 +99,6 @@ public class PauseMenu : MonoBehaviour
 
     public void OpenShop()
     {
-        // This would open the shop UI or load shop scene
         if (gameState != null)
         {
             gameState.OpenShop();
@@ -140,12 +117,6 @@ public class PauseMenu : MonoBehaviour
         {
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
-    }
-
-    public void ReturnToMainMenu()
-    {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(mainMenuSceneName);
     }
 
     public void QuitGame()

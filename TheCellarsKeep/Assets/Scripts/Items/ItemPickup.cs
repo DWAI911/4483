@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Base class for all collectible items.
-/// Items can be picked up by the player when looked at and interacted with.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class ItemPickup : MonoBehaviour, IInteractable
 {
@@ -19,7 +19,7 @@ public class ItemPickup : MonoBehaviour, IInteractable
     [SerializeField] protected ItemType itemType;
     [SerializeField] protected string itemName = "Item";
     [SerializeField] [TextArea] protected string itemDescription;
-    [SerializeField] protected int value = 1; // Amount (for essence, number of keys, etc.)
+    [SerializeField] protected int value = 1;
     [SerializeField] protected Sprite itemIcon;
 
     [Header("Visual Settings")]
@@ -54,11 +54,9 @@ public class ItemPickup : MonoBehaviour, IInteractable
 
     protected virtual void AnimateItem()
     {
-        // Floating bob animation
         float bobOffset = Mathf.Sin(Time.time * bobSpeed) * bobHeight;
         transform.position = startPosition + Vector3.up * bobOffset;
 
-        // Slow rotation
         if (visualModel != null)
         {
             visualModel.transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
@@ -81,10 +79,6 @@ public class ItemPickup : MonoBehaviour, IInteractable
                 hasBeenPickedUp = true;
                 Destroy(gameObject);
             }
-            else
-            {
-                Debug.Log($"Cannot pick up {itemName} - inventory full or incompatible");
-            }
         }
     }
 
@@ -99,11 +93,7 @@ public class ItemPickup : MonoBehaviour, IInteractable
             case ItemType.FearEssence:
                 inventory.AddFearEssence(value);
                 return true;
-            case ItemType.Consumable:
-                // Consumables handled by derived class
-                return false;
             case ItemType.LoreNote:
-                // Lore notes handled separately
                 return ShowLoreNote();
             default:
                 return false;
@@ -114,7 +104,6 @@ public class ItemPickup : MonoBehaviour, IInteractable
     {
         Debug.Log($"Picked up: {itemName}");
         
-        // Play pickup sound
         if (pickupSound != null)
         {
             AudioSource.PlayClipAtPoint(pickupSound, transform.position);
@@ -123,14 +112,12 @@ public class ItemPickup : MonoBehaviour, IInteractable
 
     protected virtual bool ShowLoreNote()
     {
-        // Lore notes would show a UI panel with the note content
         Debug.Log($"Read lore note: {itemDescription}");
         return true;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        // Auto-pickup for certain items (like essence)
         if (other.CompareTag("Player") && itemType == ItemType.FearEssence)
         {
             PlayerInteract player = other.GetComponent<PlayerInteract>();

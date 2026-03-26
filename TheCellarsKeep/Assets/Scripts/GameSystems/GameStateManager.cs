@@ -3,37 +3,28 @@ using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
 /// <summary>
-/// Central game state manager handling:
-- Run tracking (attempt count)
-- Player death and respawn
-- Win condition (escape)
-- Persistence across runs (Fear Essence, unlocks)
-- Lore note collection
+/// Central game state manager.
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 public class GameStateManager : MonoBehaviour
 {
     public static GameStateManager Instance { get; private set; }
 
-    [Header("Run Settings")]
-    [SerializeField] private int maxRunsPerSession = 50;
-
     [Header("Win Condition")]
     [SerializeField] private int fusesRequiredToEscape = 3;
 
     [Header("Scene References")]
-    [SerializeField] private string shopSceneName = "Shop";
     [SerializeField] private string gameSceneName = "Game";
 
     [Header("Audio")]
     [SerializeField] private AudioClip deathSound;
     [SerializeField] private AudioClip escapeMusic;
 
-    // Persistent data (survives between runs)
+    // Persistent data
     private int totalFearEssence = 0;
     private int currentRunEssence = 0;
     private int totalRuns = 0;
     private int successfulEscapes = 0;
-    private List<string> unlockedItems = new List<string>();
     private List<int> collectedLoreNotes = new List<int>();
     private float longestSurvivalTime = 0f;
     private Dictionary<string, int> shopItemPurchaseCount = new Dictionary<string, int>();
@@ -46,7 +37,6 @@ public class GameStateManager : MonoBehaviour
     // References
     private PlayerController player;
     private PlayerInventory playerInventory;
-    private LevelGenerator levelGenerator;
 
     // Events
     public event System.Action<int> OnFearEssenceChanged;
@@ -63,10 +53,10 @@ public class GameStateManager : MonoBehaviour
     public int FusesRequired => fusesRequiredToEscape;
     public bool IsPaused => isPaused;
     public bool HasWon => hasWon;
+    public int TotalNotesCollected => collectedLoreNotes.Count;
 
     private void Awake()
     {
-        // Singleton pattern
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -74,7 +64,7 @@ public class GameStateManager : MonoBehaviour
         }
 
         Instance = this;
-        DontDestroyOnLoad(gameObject); // Persist across scene loads
+        DontDestroyOnLoad(gameObject);
 
         LoadPersistentData();
     }
@@ -84,7 +74,6 @@ public class GameStateManager : MonoBehaviour
         FindReferences();
         StartNewRun();
         
-        // Subscribe to AI caught event
         AIChaser.OnPlayerCaught += OnPlayerCaught;
     }
 
@@ -97,7 +86,6 @@ public class GameStateManager : MonoBehaviour
     {
         player = FindObjectOfType<PlayerController>();
         playerInventory = FindObjectOfType<PlayerInventory>();
-        levelGenerator = FindObjectOfType<LevelGenerator>();
 
         if (player != null)
         {
@@ -119,27 +107,17 @@ public class GameStateManager : MonoBehaviour
         hasWon = false;
         isPaused = false;
 
-        // Reset time scale
         Time.timeScale = 1f;
 
-        // Unlock cursor for shop, lock for gameplay
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
         OnRunCountChanged?.Invoke(totalRuns);
         Debug.Log($"Starting run #{totalRuns}");
-
-        // Regenerate level if needed
-        if (levelGenerator != null)
-        {
-            levelGenerator.GenerateLevel();
-            FindReferences(); // Re-find references after generation
-        }
     }
 
     public void RestartRun()
     {
-        // Reload the game scene
         SceneManager.LoadScene(gameSceneName);
         StartNewRun();
     }
@@ -155,13 +133,11 @@ public class GameStateManager : MonoBehaviour
     {
         float survivalTime = Time.time - currentRunStartTime;
         
-        // Update longest survival time
         if (survivalTime > longestSurvivalTime)
         {
             longestSurvivalTime = survivalTime;
         }
 
-        // Bank the Fear Essence earned this run
         if (playerInventory != null)
         {
             playerInventory.BankFearEssence();
@@ -173,18 +149,15 @@ public class GameStateManager : MonoBehaviour
         }
 
         OnPlayerDeath?.Invoke();
-        Debug.Log($"Player died after {survivalTime:F1} seconds. Earned {currentRunEssence} Fear Essence. Total: {totalFearEssence}");
+        Debug.Log($"Player died. Earned {currentRunEssence} Fear Essence. Total: {totalFearEssence}");
 
-        // Save data
         SavePersistentData();
 
-        // Play death sound
         if (deathSound != null)
         {
             AudioSource.PlayClipAtPoint(deathSound, Vector3.zero);
         }
 
-        // Show death UI or load shop
         ShowDeathScreen();
     }
 
@@ -194,27 +167,20 @@ public class GameStateManager : MonoBehaviour
         successfulEscapes++;
 
         float survivalTime = Time.time - currentRunStartTime;
-        
-        // Bonus essence for escaping
         int escapeBonus = 50 + Mathf.FloorToInt(survivalTime);
         totalFearEssence += currentRunEssence + escapeBonus;
 
-        // Check for true ending (all lore notes collected)
         bool trueEnding = collectedLoreNotes.Count >= 10;
 
         OnPlayerEscape?.Invoke();
-        Debug.Log($"ESCAPED! Survival time: {survivalTime:F1}s. Bonus: +{escapeBonus} Essence. Total: {totalFearEssence}");
+        Debug.Log($"ESCAPED! Bonus: +{escapeBonus} Essence. Total: {totalFearEssence}");
 
-        // Play escape music
         if (escapeMusic != null)
         {
             AudioSource.PlayClipAtPoint(escapeMusic, Vector3.zero);
         }
 
-        // Save data
         SavePersistentData();
-
-        // Show win screen
         ShowWinScreen(trueEnding);
     }
 
@@ -232,8 +198,7 @@ public class GameStateManager : MonoBehaviour
         {
             collectedLoreNotes.Add(note.NoteNumber);
             OnLoreNoteCollected?.Invoke(note.NoteNumber);
-            Debug.Log($"Collected lore note {note.NoteNumber}/{10}");
-
+            Debug.Log($"Collected lore note {note.NoteNumber}/10");
             SavePersistentData();
         }
     }
@@ -242,11 +207,9 @@ public class GameStateManager : MonoBehaviour
     {
         return collectedLoreNotes.Contains(noteNumber);
     }
-
-    public int TotalNotesCollected => collectedLoreNotes.Count;
     #endregion
 
-    #region Shop Integration
+    #region Shop
     public void OpenShop()
     {
         isPaused = true;
@@ -255,9 +218,6 @@ public class GameStateManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Load shop scene additively or show shop UI
-        // SceneManager.LoadScene(shopSceneName, LoadSceneMode.Additive);
-        
         Debug.Log("Shop opened");
     }
 
@@ -278,7 +238,6 @@ public class GameStateManager : MonoBehaviour
         {
             totalFearEssence -= cost;
             
-            // Track purchase count
             if (!shopItemPurchaseCount.ContainsKey(itemId))
             {
                 shopItemPurchaseCount[itemId] = 0;
@@ -288,11 +247,8 @@ public class GameStateManager : MonoBehaviour
             OnFearEssenceChanged?.Invoke(totalFearEssence);
             SavePersistentData();
             
-            Debug.Log($"Purchased {itemId} for {cost} Essence. Remaining: {totalFearEssence}");
             return true;
         }
-
-        Debug.Log($"Cannot afford {itemId}. Need {cost}, have {totalFearEssence}");
         return false;
     }
 
@@ -312,20 +268,15 @@ public class GameStateManager : MonoBehaviour
 
         Cursor.lockState = isPaused ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = isPaused;
-
-        Debug.Log(isPaused ? "Game paused" : "Game resumed");
     }
     #endregion
 
     #region UI Callbacks
     private void ShowDeathScreen()
     {
-        // This would be handled by a UI manager
-        // For now, just pause and log
         Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        
         Debug.Log("=== YOU DIED ===");
     }
 
@@ -334,15 +285,7 @@ public class GameStateManager : MonoBehaviour
         Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-
-        if (trueEnding)
-        {
-            Debug.Log("=== TRUE ENDING ACHIEVED ===");
-        }
-        else
-        {
-            Debug.Log("=== YOU ESCAPED ===");
-        }
+        Debug.Log(trueEnding ? "=== TRUE ENDING ===" : "=== YOU ESCAPED ===");
     }
     #endregion
 
@@ -354,22 +297,15 @@ public class GameStateManager : MonoBehaviour
         PlayerPrefs.SetInt("SuccessfulEscapes", successfulEscapes);
         PlayerPrefs.SetFloat("LongestSurvivalTime", longestSurvivalTime);
 
-        // Save unlocked items
-        string unlockedItemsString = string.Join(",", unlockedItems);
-        PlayerPrefs.SetString("UnlockedItems", unlockedItemsString);
-
-        // Save collected lore notes
         string notesString = string.Join(",", collectedLoreNotes);
         PlayerPrefs.SetString("CollectedLoreNotes", notesString);
 
-        // Save shop purchase counts
         foreach (var kvp in shopItemPurchaseCount)
         {
             PlayerPrefs.SetInt($"Shop_{kvp.Key}", kvp.Value);
         }
 
         PlayerPrefs.Save();
-        Debug.Log("Game data saved");
     }
 
     private void LoadPersistentData()
@@ -379,19 +315,10 @@ public class GameStateManager : MonoBehaviour
         successfulEscapes = PlayerPrefs.GetInt("SuccessfulEscapes", 0);
         longestSurvivalTime = PlayerPrefs.GetFloat("LongestSurvivalTime", 0f);
 
-        // Load unlocked items
-        string unlockedItemsString = PlayerPrefs.GetString("UnlockedItems", "");
-        if (!string.IsNullOrEmpty(unlockedItemsString))
-        {
-            unlockedItems = new List<string>(unlockedItemsString.Split(','));
-        }
-
-        // Load collected lore notes
         string notesString = PlayerPrefs.GetString("CollectedLoreNotes", "");
         if (!string.IsNullOrEmpty(notesString))
         {
             string[] noteStrings = notesString.Split(',');
-            collectedLoreNotes = new List<int>();
             foreach (string s in noteStrings)
             {
                 if (int.TryParse(s, out int noteNum))
@@ -401,7 +328,7 @@ public class GameStateManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"Loaded game data: {totalFearEssence} Essence, {totalRuns} runs, {successfulEscapes} escapes");
+        Debug.Log($"Loaded: {totalFearEssence} Essence, {totalRuns} runs");
     }
 
     public void ResetAllData()
@@ -411,29 +338,8 @@ public class GameStateManager : MonoBehaviour
         currentRunEssence = 0;
         totalRuns = 0;
         successfulEscapes = 0;
-        longestSurvivalTime = 0f;
-        unlockedItems.Clear();
         collectedLoreNotes.Clear();
         shopItemPurchaseCount.Clear();
-        
-        Debug.Log("All game data reset");
-    }
-    #endregion
-
-    #region Cheats/Debug
-    [ContextMenu("Add 100 Essence")]
-    public void AddDebugEssence()
-    {
-        totalFearEssence += 100;
-        OnFearEssenceChanged?.Invoke(totalFearEssence);
-        Debug.Log($"Added 100 Essence. Total: {totalFearEssence}");
-    }
-
-    [ContextMenu("Unlock All Items")]
-    public void DebugUnlockAllItems()
-    {
-        // Would unlock all shop items
-        Debug.Log("All items unlocked (debug)");
     }
     #endregion
 }

@@ -2,9 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// Creates flickering light effects for horror atmosphere.
-- Random intensity variation
-- Occasional "scare" flickers
-- Configurable parameters
+/// Unity 2022.3.62f1 compatible.
 /// </summary>
 [RequireComponent(typeof(Light))]
 public class FlickeringLight : MonoBehaviour
@@ -25,7 +23,7 @@ public class FlickeringLight : MonoBehaviour
     [SerializeField] private float flickerSpeed = 3f;
 
     [Header("Horror Burst Settings")]
-    [SerializeField] private float burstChance = 0.01f; // Chance per frame
+    [SerializeField] private float burstChance = 0.01f;
     [SerializeField] private float burstDuration = 0.2f;
     [SerializeField] private int burstFlickerCount = 5;
 
@@ -51,7 +49,6 @@ public class FlickeringLight : MonoBehaviour
         targetLight = GetComponent<Light>();
         baseIntensity = targetLight.intensity;
         
-        // Set up audio source
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null)
         {
@@ -60,7 +57,6 @@ public class FlickeringLight : MonoBehaviour
             audioSource.spatialBlend = 1f;
         }
 
-        // Initialize stable timer
         stableTimer = Random.Range(stableTimeMin, stableTimeMax);
     }
 
@@ -94,16 +90,14 @@ public class FlickeringLight : MonoBehaviour
     private void UpdateSinWaveFlicker()
     {
         float wave = Mathf.Sin(Time.time * flickerSpeed);
-        float normalized = (wave + 1f) / 2f; // Convert from -1~1 to 0~1
+        float normalized = (wave + 1f) / 2f;
         targetLight.intensity = Mathf.Lerp(minIntensity, maxIntensity, normalized);
     }
 
     private void UpdateHorrorBurst()
     {
-        // Normal stable light
         targetLight.intensity = baseIntensity;
 
-        // Check for random burst
         if (burstFlickersRemaining <= 0 && Random.value < burstChance)
         {
             burstFlickersRemaining = burstFlickerCount;
@@ -111,14 +105,12 @@ public class FlickeringLight : MonoBehaviour
             PlayFlickerSound();
         }
 
-        // Handle burst flickering
         if (burstFlickersRemaining > 0)
         {
             burstTimer -= Time.deltaTime;
             
             if (burstTimer <= 0f)
             {
-                // Toggle light
                 targetLight.enabled = !targetLight.enabled;
                 targetLight.intensity = Random.Range(minIntensity, maxIntensity);
                 
@@ -134,7 +126,6 @@ public class FlickeringLight : MonoBehaviour
 
         if (stableTimer <= 0f && !isFaulty)
         {
-            // Start faulty period
             isFaulty = true;
             stableTimer = faultyDuration;
             PlayFlickerSound();
@@ -142,7 +133,6 @@ public class FlickeringLight : MonoBehaviour
 
         if (isFaulty)
         {
-            // Rapid flickering
             float noise = Mathf.PerlinNoise(Time.time * flickerSpeed * 10f, 0f);
             targetLight.intensity = Mathf.Lerp(0f, maxIntensity, noise);
             targetLight.enabled = noise > 0.3f;
@@ -151,7 +141,6 @@ public class FlickeringLight : MonoBehaviour
             
             if (stableTimer <= 0f)
             {
-                // Return to stable
                 isFaulty = false;
                 targetLight.enabled = true;
                 targetLight.intensity = baseIntensity;
